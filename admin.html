@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Админка - Управление экскурсией</title>
     <style>
         * { box-sizing: border-box; }
@@ -296,6 +297,125 @@
         .file-upload-btn input {
             display: none;
         }
+
+        /* АДАПТИВ ДЛЯ МОБИЛОК */
+        @media (max-width: 768px) {
+            .password-box {
+                padding: 30px 20px;
+                width: 95%;
+            }
+            
+            .password-box h1 {
+                font-size: 24px;
+            }
+            
+            .password-input {
+                padding: 16px;
+                font-size: 20px;
+            }
+            
+            .password-btn {
+                padding: 16px;
+                font-size: 18px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .header-buttons {
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 12px 16px;
+                font-size: 15px;
+                flex: 1 1 calc(50% - 4px);
+                min-width: 140px;
+            }
+            
+            .content {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .locations-list {
+                max-height: 300px;
+                padding: 10px;
+            }
+            
+            .location-item {
+                padding: 14px;
+                font-size: 16px;
+            }
+            
+            .editor {
+                padding: 15px;
+            }
+            
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                padding: 12px;
+                font-size: 16px;
+            }
+            
+            .form-row,
+            .form-row-3 {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .hotspot-item {
+                padding: 12px;
+            }
+            
+            .save-indicator {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                text-align: center;
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+            
+            .image-preview {
+                max-width: 100%;
+            }
+            
+            .file-upload-btn {
+                padding: 14px 18px;
+                font-size: 16px;
+                display: block;
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        /* ДЛЯ МАЛЕНЬКИХ ТЕЛЕФОНОВ */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 18px;
+            }
+            
+            .btn {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+            
+            .location-item {
+                padding: 12px;
+                font-size: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -568,7 +688,7 @@
 
                 <div class="form-group">
                     <label>Панорамное фото</label>
-                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
                         <label class="file-upload-btn">
                             📎 Выбрать фото
                             <input type="file" accept="image/*" onchange="handleImageUpload(event)">
@@ -605,7 +725,7 @@
                 </div>
 
                 <div class="hotspots-section">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap: wrap; gap: 10px;">
                         <h3 style="margin:0;">Hotspots (точки интереса)</h3>
                         <button class="btn btn-primary" onclick="addHotspot()">➕ Добавить hotspot</button>
                     </div>
@@ -623,7 +743,7 @@
                 <div class="hotspot-item">
                     <div class="hotspot-header">
                         <span class="hotspot-type ${h.type}">${h.type === 'info' ? '📍 Информация' : '➡️ Переход'}</span>
-                        <button class="btn btn-danger" style="padding:4px 12px; font-size:12px;"
+                        <button class="btn btn-danger" style="padding:8px 16px; font-size:14px;"
                                 onclick="deleteHotspot(${idx})">Удалить</button>
                     </div>
 

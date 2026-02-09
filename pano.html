@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Панорама</title>
 
 <style>
@@ -147,6 +148,124 @@ canvas { display: block; }
     font-size: 24px;
     z-index: 100;
 }
+
+/* АДАПТИВ ДЛЯ МОБИЛОК */
+@media (max-width: 768px) {
+    .top-buttons {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        gap: 8px;
+    }
+    
+    .top-btn {
+        padding: 14px 16px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .tour-nav {
+        padding: 0 10px;
+    }
+    
+    .tour-nav button {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+        border-width: 3px;
+    }
+    
+    .info-box {
+        bottom: 10px;
+        width: calc(100% - 20px);
+        max-width: none;
+        padding: 20px;
+        font-size: 16px;
+    }
+    
+    #infoText {
+        font-size: 16px;
+        line-height: 1.6;
+    }
+    
+    .btn {
+        height: 44px;
+        min-width: 44px;
+        font-size: 18px;
+        padding: 0 14px;
+    }
+    
+    .progress-bar {
+        top: auto;
+        bottom: 100px;
+        padding: 12px 16px;
+        font-size: 14px;
+        width: calc(100% - 40px);
+        max-width: 300px;
+    }
+    
+    .loading {
+        font-size: 20px;
+    }
+}
+
+/* ДЛЯ МАЛЕНЬКИХ ТЕЛЕФОНОВ */
+@media (max-width: 480px) {
+    .top-btn {
+        padding: 12px 12px;
+        font-size: 13px;
+    }
+    
+    .tour-nav button {
+        width: 70px;
+        height: 70px;
+        font-size: 28px;
+    }
+    
+    .info-box {
+        padding: 16px;
+    }
+    
+    #infoText {
+        font-size: 15px;
+    }
+}
+
+/* ДЛЯ ЛАНДШАФТНОЙ ОРИЕНТАЦИИ НА МОБИЛКАХ */
+@media (max-width: 768px) and (orientation: landscape) {
+    .top-buttons {
+        top: 5px;
+        gap: 5px;
+    }
+    
+    .top-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    
+    .tour-nav button {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+    }
+    
+    .info-box {
+        bottom: 5px;
+        padding: 12px;
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+    
+    #infoText {
+        font-size: 14px;
+    }
+    
+    .progress-bar {
+        bottom: 70px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
 </style>
 </head>
 <body>
@@ -167,7 +286,7 @@ canvas { display: block; }
 
 <div class="info-box" id="infoBox">
     <div class="info-header">
-        <h3 id="infoTitle"></h3>
+        <h3 id="infoTitle" style="margin:0; font-size:20px;"></h3>
         <div style="display:flex; gap:5px;">
             <button class="btn" onclick="changeTextSize(-2)">A-</button>
             <button class="btn" onclick="changeTextSize(2)">A+</button>
@@ -195,6 +314,7 @@ let scene, camera, renderer;
 let lon, lat;
 let freeMode = false;
 let step = 0;
+let originalStep = 0;
 let tourPath = [];
 let originalTourPath = [];
 let panoId;
@@ -255,6 +375,8 @@ function toggleFreeMode() {
     const returnBtn = document.getElementById("returnBtn");
     
     if (freeMode) {
+        originalStep = step;
+        
         btn.classList.add("active");
         btn.textContent = "🔓 Свободный режим активен";
         returnBtn.style.display = "block";
@@ -280,35 +402,13 @@ function prev() {
 }
 
 function returnToRoute() {
-    const remainingPath = originalTourPath.slice(step);
-    if (remainingPath.includes(panoId)) {
-        alert("Вы уже находитесь на маршруте!");
-        return;
-    }
-    
-    let minDist = Infinity;
-    let nearestStep = step;
-    const currentLoc = activeLocations.find(l => l.id === panoId);
-    
-    remainingPath.forEach((id, idx) => {
-        const targetLoc = activeLocations.find(l => l.id === id);
-        const dist = Math.sqrt(
-            Math.pow(currentLoc.lat - targetLoc.lat, 2) +
-            Math.pow(currentLoc.lng - targetLoc.lng, 2)
-        );
-        if (dist < minDist) {
-            minDist = dist;
-            nearestStep = step + idx;
-        }
-    });
-    
-    location.href = `pano.html?mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&step=${nearestStep}`;
+    location.href = `pano.html?mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&step=${originalStep}`;
 }
 
 function showInfo(d) {
     const infoBox = document.getElementById("infoBox");
     const infoText = document.getElementById("infoText");
-    infoText.style.fontSize = "18px";
+    infoText.style.fontSize = window.innerWidth <= 768 ? "16px" : "18px";
     document.getElementById("infoTitle").textContent = d.title ?? "";
     infoText.innerHTML = d.text ?? "";
     infoBox.style.display = "block";
@@ -320,7 +420,7 @@ function closeInfo() {
 
 function changeTextSize(delta) {
     const infoText = document.getElementById("infoText");
-    let currentSize = parseInt(infoText.style.fontSize) || 18;
+    let currentSize = parseInt(infoText.style.fontSize) || (window.innerWidth <= 768 ? 16 : 18);
     currentSize += delta;
     infoText.style.fontSize = currentSize + "px";
 }
@@ -390,8 +490,12 @@ function checkHotspot(x, y) {
         showInfo(d);
     }
     
-    if (d.type === "scene" && (mode === "map" || freeMode)) {
-        location.href = `pano.html?${mode === "tour" ? `mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&step=${step}&` : ''}id=${d.targetId}`;
+    if (d.type === "scene") {
+        if (mode === "map") {
+            location.href = `pano.html?id=${d.targetId}`;
+        } else if (mode === "tour" && freeMode) {
+            location.href = `pano.html?mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&originalStep=${originalStep}&id=${d.targetId}`;
+        }
     }
 }
 
@@ -464,11 +568,30 @@ function animate() {
         const end = params.get("end");
         tourPath = routes[`${start}-${end}`] || [];
         originalTourPath = [...tourPath];
-        panoId = tourPath[step];
+        
+        const urlOriginalStep = params.get("originalStep");
+        if (urlOriginalStep !== null) {
+            originalStep = Number(urlOriginalStep);
+            freeMode = true;
+        } else {
+            originalStep = step;
+        }
+        
+        if (!panoId || panoId === 0) {
+            panoId = tourPath[step];
+        }
         
         document.getElementById("tourNav").style.display = "flex";
         document.getElementById("freeModeBtn").style.display = "block";
         document.getElementById("progressBar").style.display = "block";
+        
+        if (freeMode) {
+            const btn = document.getElementById("freeModeBtn");
+            btn.classList.add("active");
+            btn.textContent = "🔓 Свободный режим активен";
+            document.getElementById("returnBtn").style.display = "block";
+        }
+        
         updateProgress();
     }
 
@@ -511,6 +634,9 @@ function animate() {
         imageSrc,
         () => {
             document.getElementById('loading').style.display = 'none';
+            camera.updateProjectionMatrix();
+            renderer.render(scene, camera);
+            createHotspots();
         },
         undefined,
         (err) => {
@@ -528,7 +654,6 @@ function animate() {
     lon = loc.startYaw || 0;
     lat = loc.startPitch || 0;
 
-    createHotspots();
     animate();
 })();
 </script>

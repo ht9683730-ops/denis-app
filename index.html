@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Экскурсия</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -14,6 +15,8 @@
     <style>
         body { margin: 0; font-family: sans-serif; }
         #map { width: 100vw; height: 100vh; }
+        
+        /* ДЕСКТОПНАЯ ПАНЕЛЬ */
         .mode-panel {
             position: absolute;
             top: 10px;
@@ -25,6 +28,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,.2);
             width: 300px;
         }
+        
         .mode-panel button {
             display: block;
             width: 100%;
@@ -38,43 +42,297 @@
             color: white;
             transition: all 0.2s;
         }
+        
         .mode-panel button:hover {
             background: #1976D2;
         }
+        
         .admin-btn {
             background: #FF9800 !important;
         }
+        
         .admin-btn:hover {
             background: #F57C00 !important;
         }
-        .sync-indicator {
+        
+        /* БУРГЕР КНОПКА - ТОЛЬКО НА МОБИЛКАХ */
+        .burger-btn {
             position: absolute;
             top: 10px;
             right: 10px;
             z-index: 1000;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,.2);
+            cursor: pointer;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            padding: 0;
+            transition: all 0.3s;
+        }
+        
+        .burger-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        .burger-btn span {
+            display: block;
+            width: 25px;
+            height: 3px;
+            background: #333;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        
+        .burger-btn.active span:nth-child(1) {
+            transform: rotate(45deg) translate(7px, 7px);
+        }
+        
+        .burger-btn.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .burger-btn.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
+        }
+        
+        /* ВЫДВИГАЮЩЕЕСЯ МЕНЮ */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 300px;
+            height: 100vh;
+            background: white;
+            box-shadow: -4px 0 10px rgba(0,0,0,.2);
+            z-index: 999;
+            padding: 70px 20px 20px 20px;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+        }
+        
+        .side-menu.open {
+            right: 0;
+        }
+        
+        .side-menu h2 {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 998;
+            display: none;
+            transition: opacity 0.3s;
+        }
+        
+        .menu-overlay.show {
+            display: block;
+        }
+        
+        .menu-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 16px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background: #2196F3;
+            color: white;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        
+        .menu-btn:hover {
+            background: #1976D2;
+            transform: translateX(-5px);
+        }
+        
+        .menu-btn.admin {
+            background: #FF9800;
+        }
+        
+        .menu-btn.admin:hover {
+            background: #F57C00;
+        }
+        
+        .sync-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
             background: rgba(76, 175, 80, 0.9);
             color: white;
-            padding: 8px 16px;
+            padding: 10px 20px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 14px;
             display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,.2);
+        }
+
+        /* АДАПТИВ ДЛЯ МОБИЛОК */
+        @media (max-width: 768px) {
+            /* Прячем десктопную панель */
+            .mode-panel {
+                display: none;
+            }
+            
+            /* Показываем бургер */
+            .burger-btn {
+                display: flex;
+                width: 55px;
+                height: 55px;
+            }
+            
+            .burger-btn span {
+                width: 28px;
+                height: 3px;
+            }
+            
+            .side-menu {
+                width: 280px;
+                right: -300px;
+                padding: 80px 15px 20px 15px;
+            }
+            
+            .menu-btn {
+                padding: 18px;
+                font-size: 17px;
+                margin-bottom: 12px;
+            }
+            
+            .sync-indicator {
+                bottom: 20px;
+                padding: 12px 24px;
+                font-size: 15px;
+            }
+        }
+
+        /* ДЛЯ МАЛЕНЬКИХ ТЕЛЕФОНОВ */
+        @media (max-width: 480px) {
+            .burger-btn {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .side-menu {
+                width: 250px;
+                right: -270px;
+            }
+            
+            .menu-btn {
+                padding: 16px;
+                font-size: 16px;
+            }
+        }
+
+        /* ДЛЯ ЛАНДШАФТНОЙ ОРИЕНТАЦИИ НА МОБИЛКАХ */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .burger-btn {
+                width: 45px;
+                height: 45px;
+                top: 5px;
+                right: 5px;
+            }
+            
+            .side-menu {
+                width: 220px;
+                right: -240px;
+                padding: 60px 10px 10px 10px;
+            }
+            
+            .side-menu h2 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+            
+            .menu-btn {
+                padding: 12px;
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
         }
     </style>
 </head>
 <body>
-<div class="sync-indicator" id="syncIndicator">
-    ✓ Синхронизировано с админкой
-</div>
-
+<!-- ДЕСКТОПНАЯ ПАНЕЛЬ -->
 <div class="mode-panel">
     <button onclick="setMode('map')">🗺 Карта</button>
     <button onclick="setMode('tour')">🚶 Экскурсия</button>
     <button class="admin-btn" onclick="goToAdmin()">⚙️ Админка</button>
 </div>
 
+<!-- БУРГЕР КНОПКА (ТОЛЬКО МОБИЛКИ) -->
+<button class="burger-btn" id="burgerBtn" onclick="toggleMenu()">
+    <span></span>
+    <span></span>
+    <span></span>
+</button>
+
+<!-- ЗАТЕМНЕНИЕ -->
+<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+
+<!-- БОКОВОЕ МЕНЮ -->
+<div class="side-menu" id="sideMenu">
+    <h2>🎓 Меню</h2>
+    <button class="menu-btn" onclick="setModeAndClose('map')">🗺 Карта</button>
+    <button class="menu-btn" onclick="setModeAndClose('tour')">🚶 Экскурсия</button>
+    <button class="menu-btn admin" onclick="goToAdmin()">⚙️ Админка</button>
+</div>
+
+<div class="sync-indicator" id="syncIndicator">
+    ✓ Синхронизировано с админкой
+</div>
+
 <div id="map"></div>
 
 <script>
+/* ---------- МЕНЮ ---------- */
+function toggleMenu() {
+    const menu = document.getElementById('sideMenu');
+    const overlay = document.getElementById('menuOverlay');
+    const burger = document.getElementById('burgerBtn');
+    
+    menu.classList.toggle('open');
+    overlay.classList.toggle('show');
+    burger.classList.toggle('active');
+}
+
+function closeMenu() {
+    const menu = document.getElementById('sideMenu');
+    const overlay = document.getElementById('menuOverlay');
+    const burger = document.getElementById('burgerBtn');
+    
+    menu.classList.remove('open');
+    overlay.classList.remove('show');
+    burger.classList.remove('active');
+}
+
+function setModeAndClose(m) {
+    setMode(m);
+    closeMenu();
+}
+
+function goToAdmin() {
+    window.location.href = 'admin.html';
+}
+
 /* ---------- ЗАГРУЗКА ДАННЫХ ---------- */
 let activeLocations = [];
 
@@ -84,7 +342,6 @@ function loadStoredData() {
         const data = JSON.parse(stored);
         activeLocations = data.locations;
         
-        // Показываем индикатор синхронизации
         const indicator = document.getElementById('syncIndicator');
         indicator.style.display = 'block';
         setTimeout(() => {
@@ -93,7 +350,6 @@ function loadStoredData() {
         
         console.log('📥 Загружены данные из админки:', activeLocations.length, 'локаций');
     } else {
-        // Используем данные из файла
         activeLocations = locations;
         console.log('📄 Используются данные из map-data.js');
     }
@@ -123,26 +379,27 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 /* ---------- СТИЛИ ТОЧЕК ---------- */
+const isMobile = window.innerWidth <= 768;
 const normalStyle = {
-    radius: 16,
+    radius: isMobile ? 14 : 16,
     color: "black",
-    weight: 2,
+    weight: isMobile ? 2 : 2,
     fillColor: "orange",
     fillOpacity: 0.8
 };
 
 const startStyle = {
-    radius: 16,
+    radius: isMobile ? 14 : 16,
     color: "#0a7",
-    weight: 3,
+    weight: isMobile ? 3 : 3,
     fillColor: "#2ecc71",
     fillOpacity: 1
 };
 
 const endStyle = {
-    radius: 16,
+    radius: isMobile ? 14 : 16,
     color: "#c00",
-    weight: 3,
+    weight: isMobile ? 3 : 3,
     fillColor: "#e74c3c",
     fillOpacity: 1
 };
@@ -166,16 +423,18 @@ function setMode(m) {
 /* ---------- ТОЧКИ ---------- */
 activeLocations.forEach(loc => {
     const point = L.circleMarker([loc.lat, loc.lng], normalStyle)
-        .bindTooltip(loc.name);
+        .bindTooltip(loc.name, {
+            permanent: false,
+            direction: 'top',
+            className: isMobile ? 'mobile-tooltip' : ''
+        });
     
     point.on("click", () => {
-        // обычный режим карты
         if (mode === "map") {
             window.location.href = `pano.html?id=${loc.id}`;
             return;
         }
         
-        // режим экскурсии
         if (!tourStart) {
             tourStart = loc;
             point.setStyle(startStyle);
@@ -236,12 +495,10 @@ function showTourStartPoints() {
     });
 }
 
-function goToAdmin() {
-    window.location.href = 'admin.html';
-}
-
-// Инициализация - показываем все точки
 showAllPoints();
+
+// Закрываем меню при клике на карту
+map.on('click', closeMenu);
 </script>
 </body>
 </html>
