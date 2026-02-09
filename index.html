@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Экскурсия</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <script src="map-data.js"></script>
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        .mode-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,.2);
+            width: 300px;
+        }
+        .mode-panel button {
+            display: block;
+            width: 100%;
+            margin-bottom: 6px;
+            padding: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #2196F3;
+            color: white;
+            transition: all 0.2s;
+        }
+        .mode-panel button:hover {
+            background: #1976D2;
+        }
+        .admin-btn {
+            background: #FF9800 !important;
+        }
+        .admin-btn:hover {
+            background: #F57C00 !important;
+        }
+        .sync-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="sync-indicator" id="syncIndicator">
+    ✓ Синхронизировано с админкой
+</div>
+
+<div class="mode-panel">
+    <button onclick="setMode('map')">🗺 Карта</button>
+    <button onclick="setMode('tour')">🚶 Экскурсия</button>
+    <button class="admin-btn" onclick="goToAdmin()">⚙️ Админка</button>
+</div>
+
+<div id="map"></div>
+
+<script>
+/* ---------- ЗАГРУЗКА ДАННЫХ ---------- */
+let activeLocations = [];
+
+function loadStoredData() {
+    const stored = localStorage.getItem('tourData');
+    if (stored) {
+        const data = JSON.parse(stored);
+        activeLocations = data.locations;
+        
+        // Показываем индикатор синхронизации
+        const indicator = document.getElementById('syncIndicator');
+        indicator.style.display = 'block';
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 3000);
+        
+        console.log('📥 Загружены данные из админки:', activeLocations.length, 'локаций');
+    } else {
+        // Используем данные из файла
+        activeLocations = locations;
+        console.log('📄 Используются данные из map-data.js');
+    }
+}
+
+loadStoredData();
+
+/* ---------- НАСТРОЙКИ ---------- */
+const startPoint = [44.941992, 34.131292];
+const bounds = [
+    [44.934524, 34.125260],
+    [44.946381, 34.136753]
+];
+
+/* ---------- КАРТА ---------- */
+const map = L.map('map', {
+    center: startPoint,
+    zoom: 16,
+    minZoom: 16,
+    maxZoom: 19,
+    maxBounds: bounds,
+    maxBoundsViscosity: 1
+});
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+}).addTo(map);
+
+/* ---------- СТИЛИ ТОЧЕК ---------- */
+const normalStyle = {
+    radius: 16,
+    color: "black",
+    weight: 2,
+    fillColor: "orange",
+    fillOpacity: 0.8
+};
+
+const startStyle = {
+    radius: 16,
+    color: "#0a7",
+    weight: 3,
+    fillColor: "#2ecc71",
+    fillOpacity: 1
+};
+
+const endStyle = {
+    radius: 16,
+    color: "#c00",
+    weight: 3,
+    fillColor: "#e74c3c",
+    fillOpacity: 1
+};
+
+/* ---------- ЛОГИКА ---------- */
+let mode = "map";
+let tourStart = null;
+let tourEnd = null;
+
+function setMode(m) {
+    resetTour();
+    mode = m;
+    if (mode === "map") {
+        showAllPoints();
+    }
+    if (mode === "tour") {
+        showTourStartPoints();
+    }
+}
+
+/* ---------- ТОЧКИ ---------- */
+activeLocations.forEach(loc => {
+    const point = L.circleMarker([loc.lat, loc.lng], normalStyle)
+        .bindTooltip(loc.name);
+    
+    point.on("click", () => {
+        // обычный режим карты
+        if (mode === "map") {
+            window.location.href = `pano.html?id=${loc.id}`;
+            return;
+        }
+        
+        // режим экскурсии
+        if (!tourStart) {
+            tourStart = loc;
+            point.setStyle(startStyle);
+            return;
+        }
+        
+        if (!tourEnd && loc.id !== tourStart.id) {
+            tourEnd = loc;
+            point.setStyle(endStyle);
+            startTour();
+            return;
+        }
+        
+        resetTour();
+    });
+    
+    loc._point = point;
+});
+
+/* ---------- ФУНКЦИИ ---------- */
+function resetTour() {
+    tourStart = null;
+    tourEnd = null;
+    activeLocations.forEach(l => {
+        if (l._point) {
+            l._point.setStyle(normalStyle);
+        }
+    });
+}
+
+function startTour() {
+    window.location.href = 
+        `pano.html?mode=tour&start=${tourStart.id}&end=${tourEnd.id}&step=0`;
+}
+
+function showAllPoints() {
+    activeLocations.forEach(l => {
+        if (l._point && !map.hasLayer(l._point)) {
+            l._point.addTo(map);
+        }
+    });
+}
+
+function hideAllPoints() {
+    activeLocations.forEach(l => {
+        if (l._point && map.hasLayer(l._point)) {
+            map.removeLayer(l._point);
+        }
+    });
+}
+
+function showTourStartPoints() {
+    hideAllPoints();
+    activeLocations.forEach(l => {
+        if (l.tour === true && l._point) {
+            l._point.addTo(map);
+        }
+    });
+}
+
+function goToAdmin() {
+    window.location.href = 'admin.html';
+}
+
+// Инициализация - показываем все точки
+showAllPoints();
+</script>
+</body>
+</html>

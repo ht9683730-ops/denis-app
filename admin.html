@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админка - Управление экскурсией</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1976D2;
+        }
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #45a049;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #da190b;
+        }
+        .btn-secondary {
+            background: #9E9E9E;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #757575;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        .locations-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+        .location-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+        .location-item:hover {
+            background: #e3f2fd;
+        }
+        .location-item.active {
+            background: #e3f2fd;
+            border-left-color: #2196F3;
+        }
+        .location-item.tour {
+            border-right: 4px solid #4CAF50;
+        }
+        .editor {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        .hotspots-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+        .hotspot-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #FF9800;
+        }
+        .hotspot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .hotspot-type {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .hotspot-type.info {
+            background: #2196F3;
+            color: white;
+        }
+        .hotspot-type.scene {
+            background: #4CAF50;
+            color: white;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state h2 {
+            color: #666;
+        }
+        .save-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: none;
+            animation: slideIn 0.3s;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .image-preview {
+            max-width: 300px;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+        }
+        .file-upload-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #FF9800;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .file-upload-btn:hover {
+            background: #F57C00;
+        }
+        .file-upload-btn input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="save-indicator" id="saveIndicator">✓ Сохранено</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Админка экскурсии</h1>
+            <div class="header-buttons">
+                <button class="btn btn-primary" onclick="loadFromFiles()">📥 Загрузить из файлов</button>
+                <button class="btn btn-success" onclick="exportToFiles()">📤 Экспортировать в файлы</button>
+                <button class="btn btn-secondary" onclick="addNewLocation()">➕ Новая локация</button>
+                <button class="btn btn-danger" onclick="clearAllData()">🗑️ Очистить всё</button>
+                <button class="btn btn-secondary" onclick="goToMap()">🗺️ На карту</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="locations-list" id="locationsList">
+                <!-- Список локаций -->
+            </div>
+
+            <div class="editor" id="editor">
+                <div class="empty-state">
+                    <h2>Выберите локацию</h2>
+                    <p>Кликните на локацию слева для редактирования</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="map-data.js"></script>
+    <script src="pano-data.js"></script>
+    <script>
+        let currentData = {
+            locations: [],
+            hotspots: {}
+        };
+        let currentLocationId = null;
+        let db = null;
+
+        // IndexedDB
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('TourDatabase', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('images')) {
+                        db.createObjectStore('images');
+                    }
+                };
+            });
+        }
+
+        // Сохранение изображения в IndexedDB
+        function saveImage(key, base64) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['images'], 'readwrite');
+                const store = transaction.objectStore('images');
+                const request = store.put(base64, key);
+                
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Загрузка изображения из IndexedDB
+        function loadImage(key) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['images'], 'readonly');
+                const store = transaction.objectStore('images');
+                const request = store.get(key);
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Инициализация
+        async function init() {
+            await initDB();
+            loadData();
+            renderLocationsList();
+        }
+
+        // Загрузка данных
+        function loadData() {
+            const saved = localStorage.getItem('tourData');
+            if (saved) {
+                currentData = JSON.parse(saved);
+            } else {
+                currentData.locations = JSON.parse(JSON.stringify(locations));
+                currentData.hotspots = JSON.parse(JSON.stringify(panoHotSpots));
+                saveData();
+            }
+        }
+
+        // Сохранение данных
+        function saveData() {
+            localStorage.setItem('tourData', JSON.stringify(currentData));
+            showSaveIndicator();
+        }
+
+        // Индикатор сохранения
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
+        }
+
+        // Рендер списка локаций
+        function renderLocationsList() {
+            const list = document.getElementById('locationsList');
+            list.innerHTML = currentData.locations
+                .sort((a, b) => a.id - b.id)
+                .map(loc => `
+                    <div class="location-item ${loc.tour ? 'tour' : ''} ${currentLocationId === loc.id ? 'active' : ''}"
+                         onclick="selectLocation(${loc.id})">
+                        <strong>ID ${loc.id}</strong> - ${loc.name}
+                        ${loc.tour ? '<span style="color:#4CAF50; float:right;">★</span>' : ''}
+                    </div>
+                `).join('');
+        }
+
+        // Выбор локации
+        function selectLocation(id) {
+            currentLocationId = id;
+            renderLocationsList();
+            renderEditor();
+        }
+
+        // Обработка загрузки изображения
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Пожалуйста, выберите файл изображения!');
+                return;
+            }
+
+            // Показываем индикатор загрузки
+            const indicator = document.getElementById('saveIndicator');
+            indicator.textContent = '⏳ Загрузка...';
+            indicator.style.display = 'block';
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const base64 = e.target.result;
+                    
+                    // Сохраняем изображение в IndexedDB
+                    const imageKey = `pano_${currentLocationId}_${Date.now()}`;
+                    await saveImage(imageKey, base64);
+                    
+                    // Обновляем путь к панораме
+                    const loc = currentData.locations.find(l => l.id === currentLocationId);
+                    if (loc) {
+                        loc.panorama = imageKey;
+                    }
+                    
+                    saveData();
+                    renderEditor();
+                    
+                    indicator.textContent = '✓ Сохранено';
+                    setTimeout(() => {
+                        indicator.style.display = 'none';
+                        indicator.textContent = '✓ Сохранено';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Ошибка сохранения:', error);
+                    alert('Ошибка при сохранении изображения: ' + error.message);
+                    indicator.style.display = 'none';
+                    indicator.textContent = '✓ Сохранено';
+                }
+            };
+            
+            reader.onerror = () => {
+                alert('Ошибка при чтении файла!');
+                indicator.style.display = 'none';
+                indicator.textContent = '✓ Сохранено';
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        // Рендер редактора
+        async function renderEditor() {
+            const loc = currentData.locations.find(l => l.id === currentLocationId);
+            if (!loc) return;
+
+            const hotspots = currentData.hotspots[currentLocationId] || [];
+            
+            // Загружаем preview изображения
+            let imagePreview = '';
+            if (loc.panorama.startsWith('pano_')) {
+                try {
+                    const base64 = await loadImage(loc.panorama);
+                    if (base64) {
+                        imagePreview = `<img src="${base64}" class="image-preview" alt="Preview">`;
+                    }
+                } catch (e) {
+                    console.log('Изображение не найдено в IndexedDB');
+                }
+            } else if (loc.panorama.startsWith('images/')) {
+                imagePreview = `<img src="${loc.panorama}" class="image-preview" alt="Preview">`;
+            }
+
+            document.getElementById('editor').innerHTML = `
+                <h2>Редактирование: ${loc.name}</h2>
+                
+                <div class="form-group">
+                    <label>ID локации</label>
+                    <input type="number" value="${loc.id}" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label>Название</label>
+                    <input type="text" id="locName" value="${loc.name}" 
+                           onchange="updateLocation('name', this.value)">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Широта (lat)</label>
+                        <input type="number" step="0.000001" id="locLat" value="${loc.lat}"
+                               onchange="updateLocation('lat', parseFloat(this.value))">
+                    </div>
+                    <div class="form-group">
+                        <label>Долгота (lng)</label>
+                        <input type="number" step="0.000001" id="locLng" value="${loc.lng}"
+                               onchange="updateLocation('lng', parseFloat(this.value))">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Панорамное фото</label>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <label class="file-upload-btn">
+                            📎 Выбрать фото
+                            <input type="file" accept="image/*" onchange="handleImageUpload(event)">
+                        </label>
+                        <span style="color: #666; font-size: 14px;">
+                            ${loc.panorama.startsWith('pano_') ? '✓ Фото загружено (IndexedDB)' : loc.panorama}
+                        </span>
+                    </div>
+                    ${imagePreview}
+                </div>
+
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>Start Yaw (поворот)</label>
+                        <input type="number" id="locYaw" value="${loc.startYaw}"
+                               onchange="updateLocation('startYaw', parseInt(this.value))">
+                    </div>
+                    <div class="form-group">
+                        <label>Start Pitch (наклон)</label>
+                        <input type="number" id="locPitch" value="${loc.startPitch}"
+                               onchange="updateLocation('startPitch', parseInt(this.value))">
+                    </div>
+                    <div class="form-group">
+                        <label>Start FOV</label>
+                        <input type="number" id="locFov" value="${loc.startFov || 75}"
+                               onchange="updateLocation('startFov', parseInt(this.value))">
+                    </div>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="locTour" ${loc.tour ? 'checked' : ''}
+                           onchange="updateLocation('tour', this.checked)">
+                    <label for="locTour" style="margin:0;">Доступна для экскурсий (tour)</label>
+                </div>
+
+                <div class="hotspots-section">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0;">Hotspots (точки интереса)</h3>
+                        <button class="btn btn-primary" onclick="addHotspot()">➕ Добавить hotspot</button>
+                    </div>
+
+                    <div id="hotspotsList">
+                        ${hotspots.length === 0 ? '<p style="color:#999;">Нет hotspots</p>' : 
+                          hotspots.map((h, idx) => renderHotspotItem(h, idx)).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Рендер одного hotspot
+        function renderHotspotItem(h, idx) {
+            return `
+                <div class="hotspot-item">
+                    <div class="hotspot-header">
+                        <span class="hotspot-type ${h.type}">${h.type === 'info' ? '📍 Информация' : '➡️ Переход'}</span>
+                        <button class="btn btn-danger" style="padding:4px 12px; font-size:12px;"
+                                onclick="deleteHotspot(${idx})">Удалить</button>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Pitch (вертикаль)</label>
+                            <input type="number" value="${h.pitch}"
+                                   onchange="updateHotspot(${idx}, 'pitch', parseInt(this.value))">
+                        </div>
+                        <div class="form-group">
+                            <label>Yaw (горизонталь)</label>
+                            <input type="number" value="${h.yaw}"
+                                   onchange="updateHotspot(${idx}, 'yaw', parseInt(this.value))">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Тип</label>
+                        <select onchange="updateHotspot(${idx}, 'type', this.value)">
+                            <option value="info" ${h.type === 'info' ? 'selected' : ''}>Информация</option>
+                            <option value="scene" ${h.type === 'scene' ? 'selected' : ''}>Переход на сцену</option>
+                        </select>
+                    </div>
+
+                    ${h.type === 'scene' ? `
+                        <div class="form-group">
+                            <label>ID целевой локации</label>
+                            <input type="text" value="${h.targetId || ''}"
+                                   onchange="updateHotspot(${idx}, 'targetId', this.value)">
+                        </div>
+                    ` : ''}
+
+                    <div class="form-group">
+                        <label>Текст (для scene - название кнопки, для info - HTML)</label>
+                        <textarea onchange="updateHotspot(${idx}, 'text', this.value)">${h.text || ''}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Обновление локации
+        function updateLocation(field, value) {
+            const loc = currentData.locations.find(l => l.id === currentLocationId);
+            if (loc) {
+                loc[field] = value;
+                saveData();
+                renderLocationsList();
+            }
+        }
+
+        // Добавление hotspot
+        function addHotspot() {
+            if (!currentData.hotspots[currentLocationId]) {
+                currentData.hotspots[currentLocationId] = [];
+            }
+            currentData.hotspots[currentLocationId].push({
+                pitch: 0,
+                yaw: 0,
+                type: 'info',
+                text: 'Новый hotspot'
+            });
+            saveData();
+            renderEditor();
+        }
+
+        // Обновление hotspot
+        function updateHotspot(idx, field, value) {
+            currentData.hotspots[currentLocationId][idx][field] = value;
+            saveData();
+        }
+
+        // Удаление hotspot
+        function deleteHotspot(idx) {
+            if (confirm('Удалить этот hotspot?')) {
+                currentData.hotspots[currentLocationId].splice(idx, 1);
+                saveData();
+                renderEditor();
+            }
+        }
+
+        // Добавление новой локации
+        function addNewLocation() {
+            const maxId = Math.max(...currentData.locations.map(l => l.id), 0);
+            const newLoc = {
+                id: maxId + 1,
+                name: `Локация ${maxId + 1}`,
+                lat: 44.941992,
+                lng: 34.131292,
+                panorama: "images/default.jpg",
+                startYaw: 0,
+                startPitch: 0,
+                tour: false
+            };
+            currentData.locations.push(newLoc);
+            currentData.hotspots[newLoc.id] = [];
+            saveData();
+            renderLocationsList();
+            selectLocation(newLoc.id);
+        }
+
+        // Экспорт в файлы
+        function exportToFiles() {
+            const mapDataContent = `const locations = ${JSON.stringify(currentData.locations, null, 4)};\n\nconst entrance = {\n    lat: 44.9428,\n    lng: 34.1278,\n    text: "ВХОД"\n};`;
+            
+            const panoDataContent = `const panoHotSpots = ${JSON.stringify(currentData.hotspots, null, 4)};`;
+
+            downloadFile('map-data.js', mapDataContent);
+            downloadFile('pano-data.js', panoDataContent);
+
+            alert('Файлы скачаны!\n\nВНИМАНИЕ: Загруженные через 📎 фото хранятся в IndexedDB.\nДля публикации сайта скопируйте реальные фото в папку images/');
+        }
+
+        // Скачивание файла
+        function downloadFile(filename, content) {
+            const blob = new Blob([content], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Загрузка из файлов
+        function loadFromFiles() {
+            if (confirm('Загрузить данные из map-data.js и pano-data.js?\nТекущие изменения в localStorage будут перезаписаны.')) {
+                currentData.locations = JSON.parse(JSON.stringify(locations));
+                currentData.hotspots = JSON.parse(JSON.stringify(panoHotSpots));
+                saveData();
+                renderLocationsList();
+                alert('Данные загружены из файлов!');
+            }
+        }
+
+        // Очистка данных
+        async function clearAllData() {
+            if (confirm('Удалить ВСЕ данные (localStorage + IndexedDB)?\nЭто действие нельзя отменить!')) {
+                localStorage.removeItem('tourData');
+                
+                // Очистка IndexedDB
+                const transaction = db.transaction(['images'], 'readwrite');
+                const store = transaction.objectStore('images');
+                await store.clear();
+                
+                location.reload();
+            }
+        }
+
+        // Переход на карту
+        function goToMap() {
+            window.location.href = 'index.html';
+        }
+
+        // Запуск
+        init();
+    </script>
+</body>
+</html>

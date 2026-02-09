@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Панорама</title>
+
+<style>
+body { margin: 0; overflow: hidden; background:#000; }
+canvas { display: block; }
+
+.info-box {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 16px;
+    border-radius: 10px;
+    max-width: 380px;
+    width: calc(100% - 40px);
+    z-index: 10;
+    display: none;
+}
+
+.info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#infoText {
+    margin-top: 10px;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+.btn {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.tour-nav {
+    position: fixed;
+    top: 50%;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.tour-nav button {
+    pointer-events: all;
+    font-size: 26px;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border: 2px solid white;
+    cursor: pointer;
+}
+
+.tour-nav button:hover {
+    background: rgba(0,0,0,0.9);
+}
+
+.tour-nav button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.top-buttons {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 20;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.top-btn {
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.top-btn:hover {
+    background: rgba(0,0,0,0.9);
+}
+
+.top-btn.active {
+    background: rgba(76, 175, 80, 0.8);
+}
+
+.top-btn.return {
+    background: rgba(255, 152, 0, 0.8);
+}
+
+.progress-bar {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    z-index: 20;
+    display: none;
+}
+
+.progress-fill {
+    background: #4CAF50;
+    height: 6px;
+    border-radius: 3px;
+    margin-top: 5px;
+    transition: width 0.3s;
+}
+
+.loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    z-index: 100;
+}
+</style>
+</head>
+<body>
+<div class="loading" id="loading">Загрузка...</div>
+
+<div class="top-buttons">
+    <button class="top-btn" onclick="goToMap()">🗺️ Карта</button>
+    <button class="top-btn" id="freeModeBtn" onclick="toggleFreeMode()" style="display:none;">🔓 Свободный режим</button>
+    <button class="top-btn return" id="returnBtn" onclick="returnToRoute()" style="display:none;">↩️ Вернуться на маршрут</button>
+</div>
+
+<div class="progress-bar" id="progressBar">
+    <div id="progressText">Точка 1 из 10</div>
+    <div style="width:200px; background:rgba(255,255,255,0.2); border-radius:3px;">
+        <div class="progress-fill" id="progressFill" style="width:10%;"></div>
+    </div>
+</div>
+
+<div class="info-box" id="infoBox">
+    <div class="info-header">
+        <h3 id="infoTitle"></h3>
+        <div style="display:flex; gap:5px;">
+            <button class="btn" onclick="changeTextSize(-2)">A-</button>
+            <button class="btn" onclick="changeTextSize(2)">A+</button>
+            <button class="btn" onclick="closeInfo()">✕</button>
+        </div>
+    </div>
+    <div id="infoText"></div>
+</div>
+
+<div class="tour-nav" id="tourNav" style="display:none">
+    <button id="prevBtn" onclick="prev()">⬅</button>
+    <button id="nextBtn" onclick="next()">➡</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="map-data.js"></script>
+<script src="pano-data.js"></script>
+<script src="tour-data.js"></script>
+
+<script>
+(async () => {
+/* ---------- ЗАГРУЗКА ДАННЫХ ---------- */
+let activeLocations = [];
+let activeHotspots = {};
+let db = null;
+
+// Инициализация IndexedDB
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('TourDatabase', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            resolve(db);
+        };
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('images')) {
+                db.createObjectStore('images');
+            }
+        };
+    });
+}
+
+// Загрузка изображения из IndexedDB
+function loadImage(key) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['images'], 'readonly');
+        const store = transaction.objectStore('images');
+        const request = store.get(key);
+        
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function loadStoredData() {
+    await initDB();
+    
+    const stored = localStorage.getItem('tourData');
+    if (stored) {
+        try {
+            const data = JSON.parse(stored);
+            activeLocations = data.locations || locations;
+            activeHotspots = data.hotspots || panoHotSpots;
+            
+            console.log('📦 Загружено из localStorage:');
+            console.log('- Локаций:', activeLocations.length);
+        } catch (e) {
+            console.error('Ошибка парсинга localStorage:', e);
+            activeLocations = locations;
+            activeHotspots = panoHotSpots;
+        }
+    } else {
+        console.log('⚠️ localStorage пуст, используем файлы');
+        activeLocations = locations;
+        activeHotspots = panoHotSpots;
+    }
+}
+
+await loadStoredData();
+
+/* ---------- URL ---------- */
+const params = new URLSearchParams(location.search);
+const mode = params.get("mode") ?? "map";
+
+/* ---------- TOUR STATE ---------- */
+let step = Number(params.get("step") ?? 0);
+let tourPath = [];
+let originalTourPath = [];
+let freeMode = false;
+
+let panoId = Number(params.get("id"));
+
+console.log('🎯 Открываем локацию ID:', panoId);
+
+if (mode === "tour") {
+    const start = params.get("start");
+    const end = params.get("end");
+    tourPath = routes[`${start}-${end}`] || [];
+    originalTourPath = [...tourPath];
+    panoId = tourPath[step];
+    
+    document.getElementById("tourNav").style.display = "flex";
+    document.getElementById("freeModeBtn").style.display = "block";
+    document.getElementById("progressBar").style.display = "block";
+    
+    updateProgress();
+}
+
+/* ---------- LOCATION ---------- */
+let loc = activeLocations.find(l => l.id === panoId);
+
+if (!loc) {
+    console.error('❌ Локация с ID', panoId, 'не найдена!');
+    console.log('📋 Доступные ID:', activeLocations.map(l => l.id));
+    document.body.innerHTML = `
+        <div style="color:white; padding:40px; font-family:sans-serif; text-align:center;">
+            <h1>⚠️ Локация не найдена</h1>
+            <p>Локация с ID ${panoId} не существует</p>
+            <p>Доступные локации: ${activeLocations.map(l => `${l.id} (${l.name})`).join(', ')}</p>
+            <button onclick="location.href='index.html'" style="padding:10px 20px; font-size:16px; margin-top:20px; cursor:pointer;">
+                🗺️ Вернуться на карту
+            </button>
+        </div>
+    `;
+    throw new Error('Location not found');
+}
+
+console.log('✅ Локация найдена:', loc.name);
+
+/* ---------- SCENE ---------- */
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(
+    loc.startFov || 75,
+    window.innerWidth / window.innerHeight,
+    1,
+    1100
+);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* ---------- PANORAMA ---------- */
+const geometry = new THREE.SphereGeometry(500, 60, 40);
+geometry.scale(-1, 1, 1);
+
+let imageSrc = loc.panorama;
+
+console.log('🖼️ Путь к панораме:', loc.panorama);
+
+// Загружаем панораму
+if (loc.panorama.startsWith('pano_')) {
+    console.log('🔍 Загружаем из IndexedDB...');
+    try {
+        const base64 = await loadImage(loc.panorama);
+        if (base64) {
+            imageSrc = base64;
+            console.log('✅ Загружено из IndexedDB, размер:', base64.length, 'символов');
+        } else {
+            console.error('❌ Изображение не найдено в IndexedDB');
+        }
+    } catch (e) {
+        console.error('❌ Ошибка загрузки из IndexedDB:', e);
+    }
+} else {
+    console.log('📁 Используем файл:', imageSrc);
+}
+
+const texture = new THREE.TextureLoader().load(
+    imageSrc,
+    () => {
+        console.log('✅ Текстура загружена успешно');
+        document.getElementById('loading').style.display = 'none';
+    },
+    undefined,
+    (err) => {
+        console.error('❌ Ошибка загрузки текстуры:', err);
+        document.getElementById('loading').textContent = 'Ошибка загрузки изображения';
+    }
+);
+
+const sphere = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({ map: texture })
+);
+scene.add(sphere);
+
+/* ---------- CAMERA ROTATION ---------- */
+let lon = loc.startYaw || 0;
+let lat = loc.startPitch || 0;
+
+/* ---------- HOTSPOTS ---------- */
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const hotspots = [];
+
+const textureLoader = new THREE.TextureLoader();
+
+function createHotspots() {
+    hotspots.forEach(h => scene.remove(h));
+    hotspots.length = 0;
+
+    const locationHotspots = activeHotspots[panoId] || [];
+
+    locationHotspots.forEach(h => {
+        if (mode === "tour" && !freeMode && h.type === "scene") return;
+
+        const icon = h.type === "scene" ? "images/arrow.png" : "images/hotspot.png";
+
+        const sprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map: textureLoader.load(icon),
+                depthTest: false,
+                transparent: true
+            })
+        );
+
+        if (h.type === "scene") {
+            sprite.scale.set(40, 40, 1);
+        } else {
+            sprite.scale.set(30, 30, 1);
+        }
+
+        const phi = THREE.MathUtils.degToRad(90 - h.pitch);
+        const theta = THREE.MathUtils.degToRad(h.yaw);
+
+        sprite.position.set(
+            450 * Math.sin(phi) * Math.cos(theta),
+            450 * Math.cos(phi),
+            450 * Math.sin(phi) * Math.sin(theta)
+        );
+
+        sprite.userData = h;
+        scene.add(sprite);
+        hotspots.push(sprite);
+    });
+}
+
+createHotspots();
+
+/* ---------- INPUT ---------- */
+let dragging = false, sx = 0, sy = 0;
+
+addEventListener("mousedown", e => {
+    dragging = true; sx = e.clientX; sy = e.clientY;
+});
+
+addEventListener("mousemove", e => {
+    if (!dragging) return;
+    lon += (sx - e.clientX) * 0.1;
+    lat += (e.clientY - sy) * 0.1;
+    sx = e.clientX; sy = e.clientY;
+});
+
+addEventListener("touchstart", e => {
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+});
+
+addEventListener("touchmove", e => {
+    lon += (sx - e.touches[0].clientX) * 0.1;
+    lat += (e.touches[0].clientY - sy) * 0.1;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+});
+
+addEventListener("mouseup", e => {
+    dragging = false;
+    checkHotspot(e.clientX, e.clientY);
+});
+
+addEventListener("touchend", () => {
+    checkHotspot(sx, sy);
+});
+
+function goToMap() {
+    location.href = "index.html";
+}
+
+/* ---------- HOTSPOT CLICK ---------- */
+function checkHotspot(x, y) {
+    mouse.x = (x / innerWidth) * 2 - 1;
+    mouse.y = -(y / innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const hit = raycaster.intersectObjects(hotspots)[0];
+    if (!hit) return;
+
+    const d = hit.object.userData;
+
+    if (d.type === "info") {
+        showInfo(d);
+    }
+    
+    if (d.type === "scene") {
+        if (mode === "map" || freeMode) {
+            location.href = `pano.html?${mode === "tour" ? `mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&step=${step}&` : ''}id=${d.targetId}`;
+        }
+    }
+}
+
+/* ---------- INFO ---------- */
+const infoBox = document.getElementById("infoBox");
+const infoTitle = document.getElementById("infoTitle");
+const infoText = document.getElementById("infoText");
+let fontSize = 18;
+
+function showInfo(d) {
+    fontSize = 18;
+    infoText.style.fontSize = fontSize + "px";
+    infoTitle.textContent = d.title ?? "";
+    infoText.innerHTML = d.text ?? "";
+    infoBox.style.display = "block";
+}
+
+function closeInfo() {
+    infoBox.style.display = "none";
+}
+
+function changeTextSize(delta) {
+    fontSize += delta;
+    infoText.style.fontSize = fontSize + "px";
+}
+
+/* ---------- TOUR NAV ---------- */
+function updateProgress() {
+    const total = originalTourPath.length;
+    const current = step + 1;
+    const percent = (current / total) * 100;
+    
+    document.getElementById("progressText").textContent = `Точка ${current} из ${total}`;
+    document.getElementById("progressFill").style.width = percent + "%";
+    
+    document.getElementById("prevBtn").disabled = step === 0;
+    document.getElementById("nextBtn").disabled = step === originalTourPath.length - 1;
+}
+
+function next() {
+    if (step < tourPath.length - 1) {
+        const url = `pano.html?mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&step=${step+1}`;
+        location.href = url;
+    }
+}
+
+function prev() {
+    if (step > 0) {
+        const url = `pano.html?mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&step=${step-1}`;
+        location.href = url;
+    }
+}
+
+/* ---------- FREE MODE ---------- */
+function toggleFreeMode() {
+    freeMode = !freeMode;
+    const btn = document.getElementById("freeModeBtn");
+    const returnBtn = document.getElementById("returnBtn");
+    
+    if (freeMode) {
+        btn.classList.add("active");
+        btn.textContent = "🔓 Свободный режим активен";
+        returnBtn.style.display = "block";
+        createHotspots();
+    } else {
+        btn.classList.remove("active");
+        btn.textContent = "🔓 Свободный режим";
+        returnBtn.style.display = "none";
+        createHotspots();
+    }
+}
+
+function returnToRoute() {
+    const remainingPath = originalTourPath.slice(step);
+    
+    if (remainingPath.includes(panoId)) {
+        alert("Вы уже находитесь на маршруте!");
+        return;
+    }
+    
+    let minDist = Infinity;
+    let nearestId = remainingPath[0];
+    let nearestStep = step;
+    
+    const currentLoc = activeLocations.find(l => l.id === panoId);
+    
+    remainingPath.forEach((id, idx) => {
+        const targetLoc = activeLocations.find(l => l.id === id);
+        const dist = Math.sqrt(
+            Math.pow(currentLoc.lat - targetLoc.lat, 2) +
+            Math.pow(currentLoc.lng - targetLoc.lng, 2)
+        );
+        
+        if (dist < minDist) {
+            minDist = dist;
+            nearestId = id;
+            nearestStep = step + idx;
+        }
+    });
+    
+    location.href = `pano.html?mode=tour&start=${originalTourPath[0]}&end=${originalTourPath[originalTourPath.length-1]}&step=${nearestStep}`;
+}
+
+/* ---------- RESIZE ---------- */
+addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ---------- RENDER ---------- */
+function animate() {
+    requestAnimationFrame(animate);
+
+    lat = Math.max(-85, Math.min(85, lat));
+    const phi = THREE.MathUtils.degToRad(90 - lat);
+    const theta = THREE.MathUtils.degToRad(lon);
+
+    camera.lookAt(
+        500 * Math.sin(phi) * Math.cos(theta),
+        500 * Math.cos(phi),
+        500 * Math.sin(phi) * Math.sin(theta)
+    );
+
+    renderer.render(scene, camera);
+}
+animate();
+
+})();
+</script>
+</body>
+</html>
