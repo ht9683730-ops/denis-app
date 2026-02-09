@@ -10,10 +10,76 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #f5f5f5;
         }
+        
+        /* ФОРМА ПАРОЛЯ */
+        .password-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .password-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .password-box h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .password-box p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .password-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 3px;
+        }
+        .password-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .password-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .password-btn:hover {
+            background: #5568d3;
+        }
+        .password-error {
+            color: #f44336;
+            margin-top: 10px;
+            display: none;
+        }
+        
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
+            display: none;
         }
         .header {
             background: white;
@@ -233,9 +299,28 @@
     </style>
 </head>
 <body>
+    <!-- ЭКРАН ПАРОЛЯ -->
+    <div class="password-screen" id="passwordScreen">
+        <div class="password-box">
+            <h1>🔒 Админка</h1>
+            <p>Введите пароль для доступа</p>
+            <input 
+                type="password" 
+                class="password-input" 
+                id="passwordInput" 
+                placeholder="••••••"
+                autofocus
+            >
+            <button class="password-btn" onclick="checkPassword()">Войти</button>
+            <div class="password-error" id="passwordError">
+                ❌ Неправильный пароль!
+            </div>
+        </div>
+    </div>
+
     <div class="save-indicator" id="saveIndicator">✓ Сохранено</div>
     
-    <div class="container">
+    <div class="container" id="mainContainer">
         <div class="header">
             <h1>🎓 Админка экскурсии</h1>
             <div class="header-buttons">
@@ -248,10 +333,7 @@
         </div>
 
         <div class="content">
-            <div class="locations-list" id="locationsList">
-                <!-- Список локаций -->
-            </div>
-
+            <div class="locations-list" id="locationsList"></div>
             <div class="editor" id="editor">
                 <div class="empty-state">
                     <h2>Выберите локацию</h2>
@@ -264,6 +346,31 @@
     <script src="map-data.js"></script>
     <script src="pano-data.js"></script>
     <script>
+        // ПРОВЕРКА ПАРОЛЯ
+        const CORRECT_PASSWORD = "12345";
+
+        function checkPassword() {
+            const input = document.getElementById('passwordInput');
+            const error = document.getElementById('passwordError');
+            
+            if (input.value === CORRECT_PASSWORD) {
+                document.getElementById('passwordScreen').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+                init();
+            } else {
+                error.style.display = 'block';
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        // Enter для отправки
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
         let currentData = {
             locations: [],
             hotspots: {}
@@ -291,7 +398,6 @@
             });
         }
 
-        // Сохранение изображения в IndexedDB
         function saveImage(key, base64) {
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction(['images'], 'readwrite');
@@ -303,7 +409,6 @@
             });
         }
 
-        // Загрузка изображения из IndexedDB
         function loadImage(key) {
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction(['images'], 'readonly');
@@ -315,14 +420,12 @@
             });
         }
 
-        // Инициализация
         async function init() {
             await initDB();
             loadData();
             renderLocationsList();
         }
 
-        // Загрузка данных
         function loadData() {
             const saved = localStorage.getItem('tourData');
             if (saved) {
@@ -334,13 +437,11 @@
             }
         }
 
-        // Сохранение данных
         function saveData() {
             localStorage.setItem('tourData', JSON.stringify(currentData));
             showSaveIndicator();
         }
 
-        // Индикатор сохранения
         function showSaveIndicator() {
             const indicator = document.getElementById('saveIndicator');
             indicator.style.display = 'block';
@@ -349,7 +450,6 @@
             }, 2000);
         }
 
-        // Рендер списка локаций
         function renderLocationsList() {
             const list = document.getElementById('locationsList');
             list.innerHTML = currentData.locations
@@ -363,14 +463,12 @@
                 `).join('');
         }
 
-        // Выбор локации
         function selectLocation(id) {
             currentLocationId = id;
             renderLocationsList();
             renderEditor();
         }
 
-        // Обработка загрузки изображения
         async function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -380,7 +478,6 @@
                 return;
             }
 
-            // Показываем индикатор загрузки
             const indicator = document.getElementById('saveIndicator');
             indicator.textContent = '⏳ Загрузка...';
             indicator.style.display = 'block';
@@ -389,12 +486,9 @@
             reader.onload = async (e) => {
                 try {
                     const base64 = e.target.result;
-                    
-                    // Сохраняем изображение в IndexedDB
                     const imageKey = `pano_${currentLocationId}_${Date.now()}`;
                     await saveImage(imageKey, base64);
                     
-                    // Обновляем путь к панораме
                     const loc = currentData.locations.find(l => l.id === currentLocationId);
                     if (loc) {
                         loc.panorama = imageKey;
@@ -425,14 +519,12 @@
             reader.readAsDataURL(file);
         }
 
-        // Рендер редактора
         async function renderEditor() {
             const loc = currentData.locations.find(l => l.id === currentLocationId);
             if (!loc) return;
 
             const hotspots = currentData.hotspots[currentLocationId] || [];
             
-            // Загружаем preview изображения
             let imagePreview = '';
             if (loc.panorama.startsWith('pano_')) {
                 try {
@@ -441,7 +533,7 @@
                         imagePreview = `<img src="${base64}" class="image-preview" alt="Preview">`;
                     }
                 } catch (e) {
-                    console.log('Изображение не найдено в IndexedDB');
+                    console.log('Изображение не найдено');
                 }
             } else if (loc.panorama.startsWith('images/')) {
                 imagePreview = `<img src="${loc.panorama}" class="image-preview" alt="Preview">`;
@@ -457,19 +549,19 @@
 
                 <div class="form-group">
                     <label>Название</label>
-                    <input type="text" id="locName" value="${loc.name}" 
+                    <input type="text" value="${loc.name}" 
                            onchange="updateLocation('name', this.value)">
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Широта (lat)</label>
-                        <input type="number" step="0.000001" id="locLat" value="${loc.lat}"
+                        <input type="number" step="0.000001" value="${loc.lat}"
                                onchange="updateLocation('lat', parseFloat(this.value))">
                     </div>
                     <div class="form-group">
                         <label>Долгота (lng)</label>
-                        <input type="number" step="0.000001" id="locLng" value="${loc.lng}"
+                        <input type="number" step="0.000001" value="${loc.lng}"
                                onchange="updateLocation('lng', parseFloat(this.value))">
                     </div>
                 </div>
@@ -491,17 +583,17 @@
                 <div class="form-row-3">
                     <div class="form-group">
                         <label>Start Yaw (поворот)</label>
-                        <input type="number" id="locYaw" value="${loc.startYaw}"
+                        <input type="number" value="${loc.startYaw}"
                                onchange="updateLocation('startYaw', parseInt(this.value))">
                     </div>
                     <div class="form-group">
                         <label>Start Pitch (наклон)</label>
-                        <input type="number" id="locPitch" value="${loc.startPitch}"
+                        <input type="number" value="${loc.startPitch}"
                                onchange="updateLocation('startPitch', parseInt(this.value))">
                     </div>
                     <div class="form-group">
                         <label>Start FOV</label>
-                        <input type="number" id="locFov" value="${loc.startFov || 75}"
+                        <input type="number" value="${loc.startFov || 75}"
                                onchange="updateLocation('startFov', parseInt(this.value))">
                     </div>
                 </div>
@@ -526,7 +618,6 @@
             `;
         }
 
-        // Рендер одного hotspot
         function renderHotspotItem(h, idx) {
             return `
                 <div class="hotspot-item">
@@ -566,14 +657,13 @@
                     ` : ''}
 
                     <div class="form-group">
-                        <label>Текст (для scene - название кнопки, для info - HTML)</label>
+                        <label>Текст</label>
                         <textarea onchange="updateHotspot(${idx}, 'text', this.value)">${h.text || ''}</textarea>
                     </div>
                 </div>
             `;
         }
 
-        // Обновление локации
         function updateLocation(field, value) {
             const loc = currentData.locations.find(l => l.id === currentLocationId);
             if (loc) {
@@ -583,7 +673,6 @@
             }
         }
 
-        // Добавление hotspot
         function addHotspot() {
             if (!currentData.hotspots[currentLocationId]) {
                 currentData.hotspots[currentLocationId] = [];
@@ -598,13 +687,11 @@
             renderEditor();
         }
 
-        // Обновление hotspot
         function updateHotspot(idx, field, value) {
             currentData.hotspots[currentLocationId][idx][field] = value;
             saveData();
         }
 
-        // Удаление hotspot
         function deleteHotspot(idx) {
             if (confirm('Удалить этот hotspot?')) {
                 currentData.hotspots[currentLocationId].splice(idx, 1);
@@ -613,7 +700,6 @@
             }
         }
 
-        // Добавление новой локации
         function addNewLocation() {
             const maxId = Math.max(...currentData.locations.map(l => l.id), 0);
             const newLoc = {
@@ -633,7 +719,6 @@
             selectLocation(newLoc.id);
         }
 
-        // Экспорт в файлы
         function exportToFiles() {
             const mapDataContent = `const locations = ${JSON.stringify(currentData.locations, null, 4)};\n\nconst entrance = {\n    lat: 44.9428,\n    lng: 34.1278,\n    text: "ВХОД"\n};`;
             
@@ -642,10 +727,9 @@
             downloadFile('map-data.js', mapDataContent);
             downloadFile('pano-data.js', panoDataContent);
 
-            alert('Файлы скачаны!\n\nВНИМАНИЕ: Загруженные через 📎 фото хранятся в IndexedDB.\nДля публикации сайта скопируйте реальные фото в папку images/');
+            alert('Файлы скачаны!');
         }
 
-        // Скачивание файла
         function downloadFile(filename, content) {
             const blob = new Blob([content], { type: 'text/javascript' });
             const url = URL.createObjectURL(blob);
@@ -656,38 +740,29 @@
             URL.revokeObjectURL(url);
         }
 
-        // Загрузка из файлов
         function loadFromFiles() {
-            if (confirm('Загрузить данные из map-data.js и pano-data.js?\nТекущие изменения в localStorage будут перезаписаны.')) {
+            if (confirm('Загрузить данные из файлов?')) {
                 currentData.locations = JSON.parse(JSON.stringify(locations));
                 currentData.hotspots = JSON.parse(JSON.stringify(panoHotSpots));
                 saveData();
                 renderLocationsList();
-                alert('Данные загружены из файлов!');
+                alert('Данные загружены!');
             }
         }
 
-        // Очистка данных
         async function clearAllData() {
-            if (confirm('Удалить ВСЕ данные (localStorage + IndexedDB)?\nЭто действие нельзя отменить!')) {
+            if (confirm('Удалить ВСЕ данные?')) {
                 localStorage.removeItem('tourData');
-                
-                // Очистка IndexedDB
                 const transaction = db.transaction(['images'], 'readwrite');
                 const store = transaction.objectStore('images');
                 await store.clear();
-                
                 location.reload();
             }
         }
 
-        // Переход на карту
         function goToMap() {
             window.location.href = 'index.html';
         }
-
-        // Запуск
-        init();
     </script>
 </body>
 </html>
